@@ -43,6 +43,7 @@ public class SettingsViewModel : ViewModelBase
         SaveCommand = new RelayCommand(_ => Save());
         CancelCommand = new RelayCommand(_ => Cancel());
         ResetCommand = new RelayCommand(_ => LoadFromSettings(new WidgetSettings()));
+        CloseCommand = new RelayCommand(_ => CloseRequested?.Invoke());
 
         SaveRequested += _ => { };
     }
@@ -98,6 +99,8 @@ public class SettingsViewModel : ViewModelBase
     public ICommand SaveCommand { get; }
     public ICommand CancelCommand { get; }
     public ICommand ResetCommand { get; }
+    public ICommand CloseCommand { get; }
+
 
     private void LoadFromSettings(WidgetSettings s)
     {

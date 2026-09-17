@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using System.Windows.Input;
 using WindowsTimeWidget.Models;
 using WindowsTimeWidget.ViewModels;
 
@@ -28,6 +29,15 @@ namespace WindowsTimeWidget.Views.Windows
             {
                 if (DialogResult is null) DialogResult = false;
             };
+        }
+
+        private void Window_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (Mouse.LeftButton == MouseButtonState.Pressed)
+            {
+                try { DragMove(); }
+                catch { }
+            }
         }
     }
 }

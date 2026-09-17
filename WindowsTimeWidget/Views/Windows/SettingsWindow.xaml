@@ -14,17 +14,29 @@
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"
         FontFamily="{materialDesign:MaterialDesignFont}"
         TextOptions.TextFormattingMode="Ideal"
-        TextOptions.TextRenderingMode="Auto">
+        TextOptions.TextRenderingMode="Auto"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown"
+        WindowStyle="None">
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+        <!-- Window Buttons -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" FlowDirection="RightToLeft"  Margin="0,-10,0,16">
+            <Button Background="Transparent" BorderThickness="0" Command="{Binding CloseCommand}">
+                <materialDesign:PackIcon Kind="Close" 
+                                        Width="30" Height="30"
+                                        VerticalAlignment="Center"/>
+            </Button>
+        </StackPanel>
+        
         <!-- Header -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,16">
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,25">
             <materialDesign:PackIcon Kind="Cog" Width="24" Height="24"
                                      VerticalAlignment="Center"/>
             <TextBlock Text="Widget Settings" FontSize="22" FontWeight="SemiBold"
@@ -32,7 +44,7 @@
         </StackPanel>
 
         <!-- Body -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
             <StackPanel>
 
                 <!-- Time Zone -->
@@ -148,7 +160,7 @@
         </ScrollViewer>
 
         <!-- Footer -->
-        <Grid Grid.Row="2" Margin="0,16,0,0">
+        <Grid Grid.Row="3" Margin="0,16,0,0">
             <Button Content="Reset"
                     Command="{Binding ResetCommand}"
                     Style="{StaticResource MaterialDesignOutlinedButton}"
