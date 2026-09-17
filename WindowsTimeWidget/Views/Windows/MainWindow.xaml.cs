@@ -1,14 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
+﻿using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
+using WindowsTimeWidget.ViewModels;
 
 namespace WindowsTimeWidget.Views.Windows
 {
@@ -17,9 +9,74 @@ namespace WindowsTimeWidget.Views.Windows
     /// </summary>
     public partial class MainWindow : Window
     {
-        public MainWindow()
+        private readonly MainViewModel _vm;
+
+        public MainWindow(MainViewModel vm)
         {
             InitializeComponent();
+            _vm = vm;
+            DataContext = vm;
+            _vm.Start();
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (_vm.Settings.WindowLeft is double left && _vm.Settings.WindowTop is double top)
+            {
+                Left = left;
+                Top = top;
+            }
+            else
+            {
+                // Default: top-right corner of primary screen
+                var wa = SystemParameters.WorkArea;
+                Left = wa.Right - Width - 24;
+                Top = wa.Top + 24;
+            }
+        }
+
+        private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (Mouse.LeftButton == MouseButtonState.Pressed)
+            {
+                try { DragMove(); }
+                catch { /* swallow rare InvalidOperationException */ }
+            }
+        }
+
+        private void Window_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            // Right-click → open settings
+            OpenSettings();
+        }
+
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            _vm.SaveSettings();
+            Close();
+        }
+
+        private void OpenSettings()
+        {
+            var settingsWindow = App.Services.GetService(typeof(SettingsWindow)) as SettingsWindow;
+            if (settingsWindow is null) return;
+
+            settingsWindow.Owner = this;
+            settingsWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+
+            if (settingsWindow.ShowDialog() == true && settingsWindow.Result is { } updated)
+            {
+                _vm.ApplySettings(updated);
+            }
+        }
+
+        private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+        {
+            _vm.Settings.WindowLeft = Left;
+            _vm.Settings.WindowTop = Top;
+            _vm.SaveSettings();
+            _vm.Stop();
+            _vm.Dispose();
         }
     }
 }

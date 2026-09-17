@@ -1,14 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
+﻿using System.Windows;
+using WindowsTimeWidget.Models;
+using WindowsTimeWidget.ViewModels;
 
 namespace WindowsTimeWidget.Views.Windows
 {
@@ -17,9 +9,25 @@ namespace WindowsTimeWidget.Views.Windows
     /// </summary>
     public partial class SettingsWindow : Window
     {
-        public SettingsWindow()
+        private readonly SettingsViewModel _vm;
+        public WidgetSettings? Result { get; private set; }
+
+        public SettingsWindow(SettingsViewModel vm)
         {
             InitializeComponent();
+
+            _vm = vm;
+            DataContext = vm;
+
+            _vm.SaveRequested += settings =>
+            {
+                Result = settings;
+                DialogResult = true;
+            };
+            _vm.CloseRequested += () =>
+            {
+                if (DialogResult is null) DialogResult = false;
+            };
         }
     }
 }
