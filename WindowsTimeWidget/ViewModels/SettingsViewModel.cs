@@ -19,6 +19,8 @@ public class SettingsViewModel : ViewModelBase
     private bool _use24Hour = true;
     private bool _showSeconds = true;
     private bool _showDate = true;
+    private WidgetLanguage _selectedLanguage = WidgetLanguage.English;
+    private bool _showBothDates;
 
     public SettingsViewModel(ISettingsService settingsService, ITimeService timeService)
     {
@@ -95,7 +97,17 @@ public class SettingsViewModel : ViewModelBase
         get => _showDate;
         set => SetProperty(ref _showDate, value);
     }
+    public WidgetLanguage SelectedLanguage
+    {
+        get => _selectedLanguage;
+        set => SetProperty(ref _selectedLanguage, value);
+    }
 
+    public bool ShowBothDates
+    {
+        get => _showBothDates;
+        set => SetProperty(ref _showBothDates, value);
+    }
     public ICommand SaveCommand { get; }
     public ICommand CancelCommand { get; }
     public ICommand ResetCommand { get; }
@@ -116,6 +128,8 @@ public class SettingsViewModel : ViewModelBase
         Use24Hour = s.Use24HourFormat;
         ShowSeconds = s.ShowSeconds;
         ShowDate = s.ShowDate;
+        SelectedLanguage = s.Language;
+        ShowBothDates = s.ShowBothDates;
     }
 
     private void Save()
@@ -127,6 +141,8 @@ public class SettingsViewModel : ViewModelBase
         _workingCopy.Use24HourFormat = Use24Hour;
         _workingCopy.ShowSeconds = ShowSeconds;
         _workingCopy.ShowDate = ShowDate;
+        _workingCopy.Language = SelectedLanguage;
+        _workingCopy.ShowBothDates = ShowBothDates;
 
         _settingsService.Save(_workingCopy);
         _ = _timeService.SyncFromApiAsync(_workingCopy.TimeZoneId, CancellationToken.None);

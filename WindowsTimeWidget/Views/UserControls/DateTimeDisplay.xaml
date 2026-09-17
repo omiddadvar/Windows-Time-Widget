@@ -24,15 +24,43 @@
                    TextAlignment="Center"
                    Effect="{DynamicResource TextShadowEffect}"/>
 
-        <!-- Date -->
+        <!-- Date --><!--
         <TextBlock Grid.Row="1"
                    Text="{Binding FormattedDate}"
                    FontSize="{Binding DateFontSize}"
                    Foreground="#CCFFFFFF"
                    HorizontalAlignment="Center"
                    Margin="0,4,0,0"
-                   Visibility="{Binding Settings.ShowDate, Converter={StaticResource BoolToVisibility}}"/>
+                   Visibility="{Binding Settings.ShowDate, Converter={StaticResource BoolToVisibility}}"/>-->
 
+        <StackPanel Grid.Row="1"
+            Margin="0,4,0,0"
+            HorizontalAlignment="Center"
+            Visibility="{Binding Settings.ShowDate, Converter={StaticResource BoolToVisibility}}">
+
+            <!-- Primary date (English or Persian based on Language) -->
+            <TextBlock Text="{Binding FormattedDate}"
+               FontSize="{Binding DateFontSize}"
+               FontWeight="SemiBold"
+               Foreground="#DDFFFFFF"
+               HorizontalAlignment="Center"
+               TextAlignment="Center"
+               FlowDirection="{Binding IsPersianPrimary,
+                                        Converter={StaticResource BoolToFlow}}"/>
+
+            <!-- Secondary date (only when ShowBothDates = true) -->
+            <TextBlock Text="{Binding FormattedSecondaryDate}"
+               FontSize="{Binding DateFontSize}"
+               Foreground="#AAFFFFFF"
+               HorizontalAlignment="Center"
+               TextAlignment="Center"
+               Margin="0,2,0,0"
+               FlowDirection="{Binding IsPersianSecondary,
+                                        Converter={StaticResource BoolToFlow},
+                                        ConverterParameter=Invert}"
+               Visibility="{Binding ShowSecondaryDate,
+                                     Converter={StaticResource BoolToVisibility}}"/>
+        </StackPanel>
         <!-- Timezone + status -->
         <StackPanel Grid.Row="2"
                     Orientation="Horizontal"

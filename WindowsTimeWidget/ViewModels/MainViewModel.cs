@@ -2,6 +2,7 @@
 using System.Windows.Threading;
 using WindowsTimeWidget.Abstractions;
 using WindowsTimeWidget.Models;
+using WindowsTimeWidget.Services;
 
 namespace WindowsTimeWidget.ViewModels;
 
@@ -15,9 +16,12 @@ public class MainViewModel : ViewModelBase, IDisposable
     private DateTime _currentTime;
     private string _formattedTime = string.Empty;
     private string _formattedDate = string.Empty;
+    private string _formattedSecondaryDate = string.Empty;
+    private bool _showSecondaryDate;
     private string _timeZoneLabel = string.Empty;
     private string _dayOfWeek = string.Empty;
     private bool _isUsingSystemTime;
+
 
     public MainViewModel(ITimeService timeService, ISettingsService settingsService)
     {
@@ -74,12 +78,24 @@ public class MainViewModel : ViewModelBase, IDisposable
         get => _isUsingSystemTime;
         private set => SetProperty(ref _isUsingSystemTime, value);
     }
+    public bool ShowSecondaryDate
+    {
+        get => _showSecondaryDate;
+        private set => SetProperty(ref _showSecondaryDate, value);
+    }
 
+    public string FormattedSecondaryDate
+    {
+        get => _formattedSecondaryDate;
+        private set => SetProperty(ref _formattedSecondaryDate, value);
+    }
     public double WidgetWidth => Settings.Size.GetDimensions().Width;
     public double WidgetHeight => Settings.Size.GetDimensions().Height;
     public double TimeFontSize => Settings.Size.GetFontSize();
     public double DateFontSize => Settings.Size.GetDateFontSize();
-
+    public bool IsPersianPrimary => Settings.Language == WidgetLanguage.Persian;
+    public bool IsPersianSecondary => Settings.ShowBothDates &&
+                                  Settings.Language != WidgetLanguage.Persian;
     public Brush BackgroundBrush
     {
         get
@@ -110,12 +126,14 @@ public class MainViewModel : ViewModelBase, IDisposable
     public void ApplySettings(WidgetSettings newSettings)
     {
         Settings = newSettings;
+
         RefreshFormatted();
         OnPropertyChanged(nameof(WidgetWidth));
         OnPropertyChanged(nameof(WidgetHeight));
         OnPropertyChanged(nameof(TimeFontSize));
         OnPropertyChanged(nameof(DateFontSize));
         OnPropertyChanged(nameof(BackgroundBrush));
+        OnPropertyChanged(nameof(IsPersianPrimary));
     }
 
     public void SaveSettings() => _settingsService.Save(Settings);
@@ -133,17 +151,27 @@ public class MainViewModel : ViewModelBase, IDisposable
 
     private void RefreshFormatted()
     {
-        var tz = TimeZoneInfo.FindSystemTimeZoneById(Settings.TimeZoneId);
-        var local = TimeZoneInfo.ConvertTime(CurrentTime, tz);
+        var local = DateTime.Now;
 
         var timeFormat = Settings.Use24HourFormat
             ? (Settings.ShowSeconds ? "HH:mm:ss" : "HH:mm")
             : (Settings.ShowSeconds ? "hh:mm:ss tt" : "hh:mm tt");
 
         FormattedTime = local.ToString(timeFormat);
-        FormattedDate = local.ToString("dddd, MMMM dd, yyyy");
-        DayOfWeek = local.ToString("dddd");
-        TimeZoneLabel = tz.Id;
+
+        if (Settings.Language == WidgetLanguage.Persian)
+        {
+            FormattedDate = DateFormatter.FormatPersianDate(local);
+            FormattedSecondaryDate = DateFormatter.FormatEnglishDate(local);
+        }
+        else
+        {
+            FormattedDate = DateFormatter.FormatEnglishDate(local);
+            FormattedSecondaryDate = DateFormatter.FormatPersianDate(local);
+        }
+
+        ShowSecondaryDate = Settings.ShowBothDates;
+        OnPropertyChanged(nameof(IsPersianPrimary));
     }
 
     public void Dispose()

@@ -18,6 +18,7 @@
             <conv:EnumToBoolConverter x:Key="EnumToBool"/>
             <conv:HexToBrushConverter x:Key="HexToBrush"/>
             <conv:ColorToHexConverter x:Key="ColorToHex"/>
+            <conv:BoolToFlowDirectionConverter x:Key="BoolToFlow"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

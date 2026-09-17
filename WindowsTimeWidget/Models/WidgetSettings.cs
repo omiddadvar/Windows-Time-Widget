@@ -7,6 +7,8 @@ public class WidgetSettings
     public string TimeZoneId { get; set; } = TimeZoneInfo.Local.Id;
     public string WidgetColor { get; set; } = "#CC1E1E2E";
     public WidgetSize Size { get; set; } = WidgetSize.Medium;
+    public WidgetLanguage Language { get; set; } = WidgetLanguage.English;
+    public bool ShowBothDates { get; set; } = true;
     public double Opacity { get; set; } = 0.9;
     public bool Use24HourFormat { get; set; } = true;
     public bool ShowSeconds { get; set; } = true;

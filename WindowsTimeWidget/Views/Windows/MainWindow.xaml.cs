@@ -60,7 +60,7 @@ namespace WindowsTimeWidget.Views.Windows
             if (settingsWindow is null) return;
 
             settingsWindow.Owner = this;
-            settingsWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            settingsWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
             if (settingsWindow.ShowDialog() == true && settingsWindow.Result is { } updated)
             {

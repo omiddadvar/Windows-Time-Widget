@@ -8,7 +8,7 @@
         mc:Ignorable="d"
         Title="Widget Settings"
         Width="460" Height="620"
-        WindowStartupLocation="CenterOwner"
+        WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         Background="{DynamicResource MaterialDesignPaper}"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"
@@ -72,7 +72,31 @@
                                  Style="{StaticResource MaterialDesignRadioButton}"
                                  HorizontalAlignment="Center"/>
                 </UniformGrid>
-                
+
+                    <!-- Language -->
+                    <TextBlock Text="Language" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                        <RadioButton Content="English"
+                     GroupName="Lang"
+                     IsChecked="{Binding SelectedLanguage,
+                                          Converter={StaticResource EnumToBool},
+                                          ConverterParameter=English}"
+                     Style="{StaticResource MaterialDesignRadioButton}"
+                     Margin="0,0,20,0"/>
+                    <RadioButton Content="Persian"
+                         GroupName="Lang"
+                         IsChecked="{Binding SelectedLanguage,
+                                              Converter={StaticResource EnumToBool},
+                                              ConverterParameter=Persian}"
+                         Style="{StaticResource MaterialDesignRadioButton}"/>
+                </StackPanel>
+
+                <!-- Show both dates -->
+                <CheckBox Content="Show both Gregorian and Persian dates"
+                    IsChecked="{Binding ShowBothDates}"
+                    Style="{StaticResource MaterialDesignCheckBox}"
+                    Margin="0,0,0,16"/>
+
                 <!-- Color -->
                 <TextBlock Text="Widget Color" FontWeight="SemiBold" Margin="0,0,0,6"/>
                 <Grid Margin="0,0,0,16">

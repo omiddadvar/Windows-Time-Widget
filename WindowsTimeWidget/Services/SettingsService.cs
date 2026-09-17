@@ -22,7 +22,7 @@ public class SettingsService : ISettingsService
     {
         var folder = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "DateTimeWidget");
+            "Mohaasaan", "DateTimeWidget");
         Directory.CreateDirectory(folder);
         _settingsPath = Path.Combine(folder, "settings.json");
 
