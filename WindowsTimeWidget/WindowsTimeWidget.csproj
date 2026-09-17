@@ -9,10 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Views\UserControls\" />
-  </ItemGroup>
-
-  <ItemGroup>
+    <PackageReference Include="MaterialDesignColors" Version="5.3.2" />
+    <PackageReference Include="MaterialDesignThemes" Version="5.3.2" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.12" />
     <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="10.0.12" />
