@@ -34,7 +34,6 @@ public class TimeService : ITimeService
         if (string.IsNullOrWhiteSpace(timeZoneId))
             timeZoneId = TimeZoneInfo.Local.Id;
 
-        // Prevent overlapping syncs
         if (!await _syncLock.WaitAsync(0, cancellationToken))
         {
             return;
