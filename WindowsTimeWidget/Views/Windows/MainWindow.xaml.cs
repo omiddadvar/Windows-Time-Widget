@@ -29,8 +29,8 @@ namespace WindowsTimeWidget.Views.Windows
             else
             {
                 var wa = SystemParameters.WorkArea;
-                Left = wa.Right - Width - 128;
-                Top = wa.Top + 24;
+                Left = wa.Right - Width - 200;
+                Top = wa.Top + 30;
             }
         }
 
@@ -75,6 +75,12 @@ namespace WindowsTimeWidget.Views.Windows
             _vm.SaveSettings();
             _vm.Stop();
             _vm.Dispose();
+        }
+        private void Window_LocationChanged(object sender, EventArgs e)
+        {
+            _vm.Settings.WindowLeft = Left;
+            _vm.Settings.WindowTop = Top;
+            _vm.SaveSettings();
         }
     }
 }
