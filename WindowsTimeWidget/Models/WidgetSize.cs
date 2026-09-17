@@ -11,10 +11,10 @@ public static class WidgetSizeExtensions
 {
     public static (double Width, double Height) GetDimensions(this WidgetSize size) => size switch
     {
-        WidgetSize.Small => (200, 80),
-        WidgetSize.Medium => (320, 130),
-        WidgetSize.Large => (480, 190),
-        _ => (320, 130)
+        WidgetSize.Small => (200, 30),
+        WidgetSize.Medium => (250, 40),
+        WidgetSize.Large => (300, 50),
+        _ => (320, 50)
     };
 
     public static double GetFontSize(this WidgetSize size) => size switch

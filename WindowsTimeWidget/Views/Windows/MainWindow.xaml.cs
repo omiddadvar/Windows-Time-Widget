@@ -28,9 +28,8 @@ namespace WindowsTimeWidget.Views.Windows
             }
             else
             {
-                // Default: top-right corner of primary screen
                 var wa = SystemParameters.WorkArea;
-                Left = wa.Right - Width - 24;
+                Left = wa.Right - Width - 128;
                 Top = wa.Top + 24;
             }
         }
@@ -40,13 +39,12 @@ namespace WindowsTimeWidget.Views.Windows
             if (Mouse.LeftButton == MouseButtonState.Pressed)
             {
                 try { DragMove(); }
-                catch { /* swallow rare InvalidOperationException */ }
+                catch { }
             }
         }
 
         private void Window_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
-            // Right-click → open settings
             OpenSettings();
         }
 
