@@ -60,7 +60,7 @@
                                  Style="{StaticResource MaterialDesignRadioButton}"
                                  HorizontalAlignment="Center"/>
                 </UniformGrid>
-
+                
                 <!-- Color -->
                 <TextBlock Text="Widget Color" FontWeight="SemiBold" Margin="0,0,0,6"/>
                 <Grid Margin="0,0,0,16">
@@ -69,18 +69,47 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
+                    <!-- Hex input (still editable for precision) -->
                     <TextBox Grid.Column="0"
-                             Text="{Binding ColorHex, UpdateSourceTrigger=PropertyChanged}"
-                             materialDesign:HintAssist.Hint="Hex (#AARRGGBB)"
-                             Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                         Text="{Binding ColorHex, UpdateSourceTrigger=PropertyChanged}"
+                         materialDesign:HintAssist.Hint="Hex (#AARRGGBB)"
+                         Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
 
-                    <Border Grid.Column="1"
-                            Width="44" Height="44"
-                            CornerRadius="6"
-                            Margin="10,0,0,0"
-                            BorderBrush="#55000000"
-                            BorderThickness="1"
-                            Background="{Binding ColorHex, Converter={StaticResource HexToBrush}}"/>
+                <!-- Swatch button → opens popup with ColorPicker -->
+                <ToggleButton x:Name="ColorPickerToggle"
+                  Grid.Column="1"
+                  Width="44" Height="44"
+                  Margin="10,0,0,0"
+                  Padding="0"
+                  BorderThickness="1"
+                  BorderBrush="#55000000"
+                  Background="{Binding ColorHex, Converter={StaticResource HexToBrush}}"
+                  Style="{StaticResource MaterialDesignFlatToggleButton}"
+                  ToolTip="Pick a color">
+                        <materialDesign:PackIcon Kind="EyedropperVariant"
+                                 Width="18" Height="18"
+                                 Foreground="White"/>
+                    </ToggleButton>
+
+                    <!-- Popup with the actual picker -->
+                    <Popup Grid.Column="1"
+                       IsOpen="{Binding IsChecked, ElementName=ColorPickerToggle, Mode=TwoWay}"
+                       PlacementTarget="{Binding ElementName=ColorPickerToggle}"
+                       Placement="Bottom"
+                       StaysOpen="False"
+                       AllowsTransparency="True"
+                       PopupAnimation="Fade">
+                        <materialDesign:Card Margin="0,6,0,0"
+                             UniformCornerRadius="8"
+                             materialDesign:ElevationAssist.Elevation="Dp4">
+                            <materialDesign:ColorPicker Width="300"
+                                        Height="380"
+                                        Color="{Binding ColorHex,
+                                                         Converter={StaticResource ColorToHex},
+                                                         Mode=TwoWay,
+                                                         UpdateSourceTrigger=PropertyChanged}"/>
+                        </materialDesign:Card>
+                    </Popup>
                 </Grid>
 
                 <!-- Opacity -->

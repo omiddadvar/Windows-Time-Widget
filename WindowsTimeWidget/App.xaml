@@ -17,6 +17,7 @@
             <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
             <conv:EnumToBoolConverter x:Key="EnumToBool"/>
             <conv:HexToBrushConverter x:Key="HexToBrush"/>
+            <conv:ColorToHexConverter x:Key="ColorToHex"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
