@@ -14,9 +14,14 @@ public class DateFormatterServiceTests
     [Fact]
     public void FormatEnglishDate_MatchesExpectedEnUsFormat()
     {
+        // Arrange
         var local = new DateTime(2024, 3, 15, 10, 30, 0);
 
-        DateFormatter.FormatEnglishDate(local).Should().Be("Friday, March 15, 2024");
+        // Act
+        var result = DateFormatter.FormatEnglishDate(local);
+
+        // Assert
+        result.Should().Be("Friday, March 15, 2024");
     }
 
     [Theory]
@@ -25,17 +30,27 @@ public class DateFormatterServiceTests
     [InlineData(2024, 12, 31)]
     public void FormatEnglishDate_IsCultureInvariant(int y, int m, int d)
     {
+        // Arrange
         var local = new DateTime(y, m, d);
         var expected = local.ToString("dddd, MMMM dd, yyyy", EnUs);
 
-        DateFormatter.FormatEnglishDate(local).Should().Be(expected);
+        // Act
+        var result = DateFormatter.FormatEnglishDate(local);
+
+        // Assert
+        result.Should().Be(expected);
     }
 
     [Fact]
     public void FormatPersianDate_UsesPersianDigitsByDefault()
     {
-        var result = DateFormatter.FormatPersianDate(new DateTime(2024, 3, 15));
+        // Arrange
+        var local = new DateTime(2024, 3, 15);
 
+        // Act
+        var result = DateFormatter.FormatPersianDate(local);
+
+        // Assert
         result.Should().NotMatchRegex("[0-9]");
         result.Should().Contain("،");
     }
@@ -43,9 +58,13 @@ public class DateFormatterServiceTests
     [Fact]
     public void FormatPersianDate_WithWesternDigits_ContainsWesternDigits()
     {
-        var result = DateFormatter.FormatPersianDate(
-            new DateTime(2024, 3, 15), usePersianDigits: false);
+        // Arrange
+        var local = new DateTime(2024, 3, 15);
 
+        // Act
+        var result = DateFormatter.FormatPersianDate(local, usePersianDigits: false);
+
+        // Assert
         result.Should().MatchRegex("[0-9]");
         result.Should().Contain("،");
     }
@@ -53,9 +72,14 @@ public class DateFormatterServiceTests
     [Fact]
     public void FormatPersianDate_ContainsKnownMonthAndDayNames()
     {
+        // Arrange
         // Gregorian 2024-03-15 (Friday) → Persian 25 Esfand 1402
-        var result = DateFormatter.FormatPersianDate(new DateTime(2024, 3, 15));
+        var local = new DateTime(2024, 3, 15);
 
+        // Act
+        var result = DateFormatter.FormatPersianDate(local);
+
+        // Assert
         result.Should().Contain("اسفند");
         result.Should().Contain("جمعه");
     }
@@ -63,7 +87,14 @@ public class DateFormatterServiceTests
     [Fact]
     public void ToPersianDigits_MapsAllWesternDigits()
     {
-        DateFormatter.ToPersianDigits("0123456789").Should().Be("۰۱۲۳۴۵۶۷۸۹");
+        // Arrange
+        const string input = "0123456789";
+
+        // Act
+        var result = DateFormatter.ToPersianDigits(input);
+
+        // Assert
+        result.Should().Be("۰۱۲۳۴۵۶۷۸۹");
     }
 
     [Theory]
@@ -74,24 +105,38 @@ public class DateFormatterServiceTests
     [InlineData(" 1 2 ", " ۱ ۲ ")]
     public void ToPersianDigits_LeavesNonDigitsUntouched(string input, string expected)
     {
-        DateFormatter.ToPersianDigits(input).Should().Be(expected);
+        // Act
+        var result = DateFormatter.ToPersianDigits(input);
+
+        // Assert
+        result.Should().Be(expected);
     }
 
     [Fact]
     public void FormatDate_Persian_DispatchesToPersianFormatter()
     {
+        // Arrange
         var local = new DateTime(2024, 3, 15);
+        var expected = DateFormatter.FormatPersianDate(local);
 
-        DateFormatter.FormatDate(local, WidgetLanguage.Persian)
-            .Should().Be(DateFormatter.FormatPersianDate(local));
+        // Act
+        var result = DateFormatter.FormatDate(local, WidgetLanguage.Persian);
+
+        // Assert
+        result.Should().Be(expected);
     }
 
     [Fact]
     public void FormatDate_English_DispatchesToEnglishFormatter()
     {
+        // Arrange
         var local = new DateTime(2024, 3, 15);
+        var expected = DateFormatter.FormatEnglishDate(local);
 
-        DateFormatter.FormatDate(local, WidgetLanguage.English)
-            .Should().Be(DateFormatter.FormatEnglishDate(local));
+        // Act
+        var result = DateFormatter.FormatDate(local, WidgetLanguage.English);
+
+        // Assert
+        result.Should().Be(expected);
     }
 }
