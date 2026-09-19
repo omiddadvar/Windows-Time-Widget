@@ -1,4 +1,4 @@
 <Solution>
-  <Project Path="WindowsTimeWidget.Tests/WindowsTimeWidget.Tests.csproj" />
+  <Project Path="WindowsTimeWidget.Tests/WindowsTimeWidget.Tests.csproj" Id="e1f720b6-2e7c-4625-a0b1-bb04aa1f4d0c" />
   <Project Path="WindowsTimeWidget/WindowsTimeWidget.csproj" />
 </Solution>
