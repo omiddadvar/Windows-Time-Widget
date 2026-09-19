@@ -18,7 +18,30 @@ public class WidgetSettings
 
     [JsonIgnore]
     public bool IsValid => !string.IsNullOrWhiteSpace(TimeZoneId)
-                           && !string.IsNullOrWhiteSpace(WidgetColor);
+                           && !string.IsNullOrWhiteSpace(WidgetColor)
+                           && IsValidHexColor(WidgetColor);
 
     public WidgetSettings Clone() => (WidgetSettings)MemberwiseClone();
+
+
+    private bool IsValidHexColor(string? color)
+    {
+        if (string.IsNullOrWhiteSpace(color) || color[0] != '#')
+            return false;
+
+        var hex = color.AsSpan(1);
+
+        // Accept #RGB, #RGBA, #RRGGBB, #AARRGGBB
+        if (hex.Length != 3 && hex.Length != 4 &&
+            hex.Length != 6 && hex.Length != 8)
+            return false;
+
+        foreach (var c in hex)
+        {
+            if (!Uri.IsHexDigit(c))
+                return false;
+        }
+
+        return true;
+    }
 }
