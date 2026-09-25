@@ -78,7 +78,7 @@ public class RelayCommandTests
     [Fact]
     public void Ctor_NullExecute_Throws()
     {
-        // Arrange / Act
+        // Arrange + Act
         Action act = () => new RelayCommand((Action<object?>)(null!));
 
         // Assert
