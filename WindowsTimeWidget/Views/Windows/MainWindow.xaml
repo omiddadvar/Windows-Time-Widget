@@ -27,12 +27,6 @@
             BorderBrush="#33FFFFFF"
             BorderThickness="1"
             Padding="12">
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="20"
-                              ShadowDepth="0"
-                              Opacity="0.6"
-                              Color="Black"/>
-        </Border.Effect>
 
         <Grid>
             <!-- Close button (hover) -->

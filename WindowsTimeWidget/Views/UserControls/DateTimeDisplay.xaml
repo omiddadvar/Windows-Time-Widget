@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:WindowsTimeWidget.Views.UserControls"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-             mc:Ignorable="d" 
+             mc:Ignorable="d" Background="Transparent"
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
         <Grid.RowDefinitions>
@@ -23,15 +23,6 @@
                    HorizontalAlignment="Center"
                    TextAlignment="Center"
                    Effect="{DynamicResource TextShadowEffect}"/>
-
-        <!-- Date --><!--
-        <TextBlock Grid.Row="1"
-                   Text="{Binding FormattedDate}"
-                   FontSize="{Binding DateFontSize}"
-                   Foreground="#CCFFFFFF"
-                   HorizontalAlignment="Center"
-                   Margin="0,4,0,0"
-                   Visibility="{Binding Settings.ShowDate, Converter={StaticResource BoolToVisibility}}"/>-->
 
         <StackPanel Grid.Row="1"
             Margin="0,4,0,0"
