@@ -10,7 +10,10 @@ public class HexToBrushConverter : IValueConverter
     {
         try
         {
-            return new BrushConverter().ConvertFromString(value?.ToString() ?? "#CC1E1E2E")!;
+            string colorString = string.IsNullOrEmpty(value?.ToString() ?? string.Empty)
+                ? "#CC1E1E2E" :
+                value!.ToString()!;
+            return new BrushConverter().ConvertFromString(colorString)!;
         }
         catch
         {
