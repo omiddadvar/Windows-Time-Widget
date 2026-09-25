@@ -25,11 +25,10 @@ public class TimeSyncService : BackgroundService, ITimeSyncService
 
     public DateTime? NextSyncUtc => _nextSyncUtc;
 
-    public Task TriggerSyncAsync(CancellationToken cancellationToken = default)
+    public void TriggerSync()
     {
-        if (_triggerSignal.CurrentCount == 0)
-            _triggerSignal.Release();
-        return Task.CompletedTask;
+        try { _triggerSignal.Release(); }
+        catch (SemaphoreFullException) { }
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -63,8 +62,12 @@ public class TimeSyncService : BackgroundService, ITimeSyncService
             var signal = _triggerSignal.WaitAsync(stoppingToken);
             await Task.WhenAny(delay, signal);
 
-            while (_triggerSignal.CurrentCount > 0)
-                await _triggerSignal.WaitAsync(stoppingToken);
+            try
+            {
+                while (_triggerSignal.CurrentCount > 0)
+                    await _triggerSignal.WaitAsync(stoppingToken);
+            }
+            catch (OperationCanceledException) { break; }
         }
 
         _nextSyncUtc = null;

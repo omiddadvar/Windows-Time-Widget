@@ -9,7 +9,7 @@ public interface ITimeSyncService
     /// <summary>
     /// Triggers an immediate sync, outside the normal interval.
     /// </summary>
-    Task TriggerSyncAsync(CancellationToken cancellationToken = default);
+    void TriggerSync();
 
     /// <summary>
     /// The next scheduled sync time (UTC). Null if service is stopped.

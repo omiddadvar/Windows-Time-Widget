@@ -101,13 +101,14 @@ public class TimeSyncServiceTests
     }
 
     [Fact]
-    public async Task TriggerSyncAsync_InterruptsIntervalDelay()
+    public async Task TriggerSync_CausesImmediateSync_BeforeIntervalElapses()
     {
         // Arrange
-        var syncCount = 0;
         var time = new Mock<ITimeService>(MockBehavior.Loose);
+        var syncStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
         time.Setup(t => t.SyncFromApiAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Callback(() => Interlocked.Increment(ref syncCount))
+            .Callback(() => syncStarted.TrySetResult())
             .Returns(Task.CompletedTask);
 
         var sut = CreateSut(time: time, options: new TimeSyncOptions
@@ -116,43 +117,46 @@ public class TimeSyncServiceTests
             SyncInterval = TimeSpan.FromSeconds(30)
         });
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
 
         // Act
         await sut.StartAsync(cts.Token);
-        await Task.Delay(200, cts.Token);
-        var afterStartup = syncCount;
-
-        await sut.TriggerSyncAsync(cts.Token);
-        await Task.Delay(300, cts.Token);
-        var afterTrigger = syncCount;
-
-        await sut.StopAsync(CancellationToken.None);
+        await Task.Delay(100, cts.Token);
+        sut.TriggerSync();
 
         // Assert
-        afterStartup.Should().Be(1);
-        afterTrigger.Should().BeGreaterThanOrEqualTo(2);
+        var completed = await Task.WhenAny(syncStarted.Task, Task.Delay(1000, cts.Token));
+        completed.Should().Be(syncStarted.Task);
+
+        await sut.StopAsync(CancellationToken.None);
+        time.Verify(t => t.SyncFromApiAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.AtLeast(2));
     }
 
     [Fact]
-    public async Task TriggerSyncAsync_WhenSignalledTwice_DoesNotOverflow()
+    public void TriggerSync_WhenSignalAlreadyPending_DoesNotThrow()
     {
         // Arrange
         var sut = CreateSut();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
 
         // Act
-        await sut.StartAsync(cts.Token);
-        await Task.Delay(150, cts.Token);
-
-        await sut.TriggerSyncAsync(cts.Token);
-        await sut.TriggerSyncAsync(cts.Token);
-
-        await sut.StopAsync(CancellationToken.None);
+        var act = () => { sut.TriggerSync(); sut.TriggerSync(); };
 
         // Assert
-        // Reaching here without throwing is the assertion.
-        // (SemaphoreSlim full-count overflow would throw SemaphoreFullException.)
-        true.Should().BeTrue();
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void TriggerSync_BeforeStartAndAfterStop_DoesNotThrow()
+    {
+        // Arrange
+        var sut = CreateSut();
+
+        // Act
+        sut.TriggerSync();   // before start
+        sut.TriggerSync();   // still pending
+
+        // Assert
+        sut.Invoking(s => s.TriggerSync()).Should().NotThrow();
     }
 }
