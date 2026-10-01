@@ -134,6 +134,7 @@ public class MainViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(DateFontSize));
         OnPropertyChanged(nameof(BackgroundBrush));
         OnPropertyChanged(nameof(IsPersianPrimary));
+        OnPropertyChanged(nameof(TimeZoneLabel));
     }
 
     public void SaveSettings() => _settingsService.Save(Settings);
@@ -151,7 +152,9 @@ public class MainViewModel : ViewModelBase, IDisposable
 
     private void RefreshFormatted()
     {
-        var local = DateTime.Now;
+        var local = CurrentTime;
+        if (local == default)
+            local = DateTime.Now;
 
         var timeFormat = Settings.Use24HourFormat
             ? (Settings.ShowSeconds ? "HH:mm:ss" : "HH:mm")
@@ -172,6 +175,7 @@ public class MainViewModel : ViewModelBase, IDisposable
 
         ShowSecondaryDate = Settings.ShowBothDates;
         OnPropertyChanged(nameof(IsPersianPrimary));
+        OnPropertyChanged(nameof(FormattedTime));
     }
 
     public void Dispose()

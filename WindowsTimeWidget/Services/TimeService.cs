@@ -1,5 +1,6 @@
 ﻿using System.Net.Http;
 using System.Net.Http.Json;
+using TimeZoneConverter;
 using WindowsTimeWidget.Abstractions;
 using WindowsTimeWidget.Models;
 
@@ -11,8 +12,7 @@ public class TimeService : ITimeService
     private readonly ISettingsService _settingsService;
     private readonly SemaphoreSlim _syncLock = new(1, 1);
 
-    private DateTime _apiSnapshotUtc;
-    private DateTime _apiLocalSnapshot;
+    private DateTimeOffset _apiLocalSnapshot;
     private bool _hasApiSnapshot;
     private bool _isUsingSystemTimeFallback = true;
 
@@ -27,8 +27,6 @@ public class TimeService : ITimeService
     public event EventHandler<DateTime>? TimeUpdated;
 
     public bool IsUsingSystemTimeFallback => _isUsingSystemTimeFallback;
-    public DateTime? LastSuccessfulSyncUtc => _hasApiSnapshot ? _apiSnapshotUtc : null;
-
     public async Task SyncFromApiAsync(string timeZoneId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(timeZoneId))
@@ -41,10 +39,16 @@ public class TimeService : ITimeService
 
         try
         {
-            var url = $"api/v1/time/current/zone?timeZone={Uri.EscapeDataString(timeZoneId)}";
+            var ianaId = TZConvert.TryWindowsToIana(timeZoneId, out var converted)
+            ? converted
+            : timeZoneId;
+
+            var url = $"api/v1/time/current/zone?timeZone={Uri.EscapeDataString(ianaId)}";
 
             using var response = await _httpClient.GetAsync(url, cancellationToken);
             response.EnsureSuccessStatusCode();
+
+            var rawResponse = await response.Content.ReadAsStringAsync(cancellationToken);
 
             var payload = await response.Content.ReadFromJsonAsync<TimeApiResponse>(
                 cancellationToken: cancellationToken);
@@ -53,10 +57,7 @@ public class TimeService : ITimeService
                 throw new InvalidOperationException("API returned empty payload.");
 
             // Store snapshot
-            _apiLocalSnapshot = payload.DateTime;
-            _apiSnapshotUtc = DateTime.SpecifyKind(payload.DateTime, DateTimeKind.Unspecified)
-                                     .Subtract(GetOffset(timeZoneId))
-                                     .ToUniversalTime();
+            _apiLocalSnapshot = payload.DateTimeOffset;
             _hasApiSnapshot = true;
             _isUsingSystemTimeFallback = false;
 
@@ -78,12 +79,14 @@ public class TimeService : ITimeService
 
         if (_hasApiSnapshot && !_isUsingSystemTimeFallback)
         {
-            var elapsed = DateTime.UtcNow - _apiSnapshotUtc;
-            var projected = _apiLocalSnapshot.Add(elapsed);
-            return DateTime.SpecifyKind(projected, DateTimeKind.Unspecified);
+            var elapsed = DateTimeOffset.UtcNow - _apiLocalSnapshot.ToUniversalTime();
+            var projected = _apiLocalSnapshot.ToUniversalTime().Add(elapsed);
+            var inZone = TimeZoneInfo.ConvertTime(projected, tz);
+
+            return DateTime.SpecifyKind(inZone.DateTime, DateTimeKind.Unspecified);
         }
 
-        return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        return TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, tz).DateTime;
     }
 
     public void UseSystemTime()
@@ -97,7 +100,4 @@ public class TimeService : ITimeService
         try { return TimeZoneInfo.FindSystemTimeZoneById(id); }
         catch { return TimeZoneInfo.Local; }
     }
-
-    private static TimeSpan GetOffset(string id)
-        => ResolveTimeZone(id).GetUtcOffset(DateTime.UtcNow);
 }

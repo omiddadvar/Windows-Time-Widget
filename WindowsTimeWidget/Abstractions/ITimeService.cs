@@ -13,11 +13,6 @@ public interface ITimeService
     bool IsUsingSystemTimeFallback { get; }
 
     /// <summary>
-    /// UTC time of the last successful API sync, or null if never synced.
-    /// </summary>
-    DateTime? LastSuccessfulSyncUtc { get; }
-
-    /// <summary>
     /// Fetches the current time for the given timezone from the API.
     /// Falls back to system time on failure.
     /// </summary>

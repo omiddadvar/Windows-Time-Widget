@@ -4,36 +4,27 @@ namespace WindowsTimeWidget.Models;
 
 public class TimeApiResponse
 {
-    [JsonPropertyName("year")]
-    public int Year { get; set; }
+    [JsonPropertyName("date_time")]
+    public string DateTimeString { get; set; } = string.Empty;
 
-    [JsonPropertyName("month")]
-    public int Month { get; set; }
+    [JsonPropertyName("date")]
+    public string Date { get; set; } = string.Empty;
 
-    [JsonPropertyName("day")]
-    public int Day { get; set; }
+    [JsonPropertyName("time")]
+    public string Time { get; set; } = string.Empty;
 
-    [JsonPropertyName("hour")]
-    public int Hour { get; set; }
-
-    [JsonPropertyName("minute")]
-    public int Minute { get; set; }
-
-    [JsonPropertyName("seconds")]
-    public int Seconds { get; set; }
-
-    [JsonPropertyName("milliSeconds")]
-    public int MilliSeconds { get; set; }
-
-    [JsonPropertyName("dateTime")]
-    public DateTime DateTime { get; set; }
-
-    [JsonPropertyName("timeZone")]
-    public string TimeZone { get; set; } = string.Empty;
-
-    [JsonPropertyName("dayOfWeek")]
+    [JsonPropertyName("day_of_week")]
     public string DayOfWeek { get; set; } = string.Empty;
 
-    [JsonPropertyName("dstActive")]
+    [JsonPropertyName("dst_active")]
     public bool DstActive { get; set; }
+
+    [JsonPropertyName("timezone")]
+    public string TimeZone { get; set; } = string.Empty;
+
+    [JsonPropertyName("utc_offset_seconds")]
+    public int UtcOffsetSeconds { get; set; }
+
+
+    public DateTimeOffset DateTimeOffset => DateTimeOffset.Parse(DateTimeString);
 }
