@@ -208,7 +208,8 @@ public class MainViewModelTests
                       .And.Contain(nameof(MainViewModel.DateFontSize))
                       .And.Contain(nameof(MainViewModel.BackgroundBrush))
                       .And.Contain(nameof(MainViewModel.IsPersianPrimary))
-                      .And.Contain(nameof(MainViewModel.TimeZoneLabel));
+                      .And.Contain(nameof(MainViewModel.TimeZoneLabel))
+                      .And.Contain(nameof(MainViewModel.IsShowDate));
     }
 
     [Fact]
@@ -305,6 +306,25 @@ public class MainViewModelTests
 
         // Assert
         sut.ShowSecondaryDate.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsShowDate_ReflectsSettingsShowDate()
+    {
+        // Arrange
+        var seed = TestHarness.ValidSettings();
+        seed.ShowDate = false;
+        var (sut, _, _) = StaRunner.Run(() => CreateSut(seed));
+
+        // Act
+        var before = sut.IsShowDate;
+        var updated = TestHarness.ValidSettings();
+        updated.ShowDate = true;
+        StaRunner.Run(() => sut.ApplySettings(updated));
+
+        // Assert
+        before.Should().BeFalse();
+        sut.IsShowDate.Should().BeTrue();
     }
 
     [Fact]

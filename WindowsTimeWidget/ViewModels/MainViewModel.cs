@@ -89,6 +89,8 @@ public class MainViewModel : ViewModelBase, IDisposable
         get => _formattedSecondaryDate;
         private set => SetProperty(ref _formattedSecondaryDate, value);
     }
+
+    public bool IsShowDate => Settings.ShowDate;
     public double WidgetWidth => Settings.Size.GetDimensions().Width;
     public double WidgetHeight => Settings.Size.GetDimensions().Height;
     public double TimeFontSize => Settings.Size.GetFontSize();
@@ -135,6 +137,7 @@ public class MainViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(BackgroundBrush));
         OnPropertyChanged(nameof(IsPersianPrimary));
         OnPropertyChanged(nameof(TimeZoneLabel));
+        OnPropertyChanged(nameof(IsShowDate));
     }
 
     public void SaveSettings() => _settingsService.Save(Settings);

@@ -27,7 +27,7 @@
         <StackPanel Grid.Row="1"
             Margin="0,4,0,0"
             HorizontalAlignment="Center"
-            Visibility="{Binding Settings.ShowDate, Converter={StaticResource BoolToVisibility}}">
+            Visibility="{Binding IsShowDate, Converter={StaticResource BoolToVisibility}}">
 
             <!-- Primary date (English or Persian based on Language) -->
             <TextBlock Text="{Binding FormattedDate}"
