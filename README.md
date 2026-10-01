@@ -7,6 +7,7 @@
 [![.NET](https://img.shields.io/badge/.NET-10.0--windows-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![WPF](https://img.shields.io/badge/WPF-Windows-0078D4?logo=windows&logoColor=white)](https://learn.microsoft.com/dotnet/desktop/wpf/)
 [![MaterialDesign](https://img.shields.io/badge/Material%20Design-In%20XAML-7B1FA2)](http://materialdesigninxaml.net/)
+[![TimeZoneConverter](https://img.shields.io/badge/TimeZoneConverter-7.2.0-00A4EF?logo=nuget&logoColor=white)](https://github.com/mattjohnsonpint/TimeZoneConverter)
 [![Tests](https://img.shields.io/badge/tests-xUnit%20%7C%20Moq%20%7C%20FluentAssertions-25A162)](https://xunit.net/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -17,7 +18,8 @@
 ## ✨ Features
 
 - 🗓️ **Dual calendar support** — Gregorian and Persian (Jalali) dates, with Persian digit rendering
-- 🌍 **Multi-timezone** — pick any system timezone; the widget recalculates automatically
+- 🌍 **Multi-timezone** — pick any Windows system timezone; the widget recalculates automatically
+- 🔄 **Windows ↔ IANA mapping** — powered by [TimeZoneConverter](https://github.com/mattjohnsonpint/TimeZoneConverter), so Windows IDs like `Iran Standard Time` map to `Asia/Tehran` when talking to the time API
 - ☁️ **Online time sync** — pulls accurate time from [timeapi.io](https://timeapi.io/) with retry + circuit-breaker resilience (Polly)
 - 🕒 **Configurable format** — 12/24-hour, optional seconds, optional date row
 - 🎨 **Customizable appearance** — Material Design color picker, opacity slider, three widget sizes
@@ -44,6 +46,7 @@ WindowsTimeWidget/
 │   ├── DateFormatter.cs            Gregorian + Persian formatting, digit conversion
 │   ├── SettingsService.cs          JSON persistence under %APPDATA%
 │   ├── TimeService.cs              API sync + system-time fallback + drift projection
+│   │                               (converts Windows timezone IDs → IANA via TimeZoneConverter)
 │   └── BackgroundServices/
 │       ├── TimeSyncService.cs      IHostedService, periodic + triggered re-sync
 │       ├── TimeSyncOptions.cs      Configuration binding
@@ -75,6 +78,7 @@ WindowsTimeWidget/
 - **Resilience by default** — HTTP calls go through Polly retry + circuit-breaker policies
 - **Non-blocking UI** — time sync runs on a `BackgroundService`; the UI just reads projected time
 - **Culture-invariant formatting** — `DateFormatter` uses explicit `en-US` and `PersianCalendar`, independent of the host culture
+- **Portable timezone IDs** — Windows IDs are converted to IANA at the HTTP boundary, keeping the UI Windows-native while remaining compatible with the API
 
 ---
 
@@ -140,6 +144,18 @@ Persisted at:
 
 Contains timezone, color, size, opacity, language, format flags, and window position.
 
+### Timezone resolution
+
+Windows exposes timezones through `TimeZoneInfo.GetSystemTimeZones()`, which returns **Windows IDs** (e.g. `Iran Standard Time`, `N. Central Asia Standard Time`). The time API at [timeapi.io](https://timeapi.io/) only accepts **IANA IDs** (e.g. `Asia/Tehran`, `Asia/Novosibirsk`).
+
+`TimeService` bridges the two using [`TimeZoneConverter`](https://github.com/mattjohnsonpint/TimeZoneConverter):
+
+- On the way out to the API: `TZConvert.TryWindowsToIana(id, out var iana)`.
+- On the way back to `TimeZoneInfo`: the IANA ID is passed through unchanged.
+- If the input is already an IANA ID, `TryWindowsToIana` returns `false` and the ID is used as-is.
+
+This means the settings dropdown can show Windows-native timezone names (what users expect on Windows), while the HTTP layer stays compatible with the API's IANA-only contract.
+
 ---
 
 ## 🎮 Usage
@@ -168,13 +184,14 @@ The project ships with a comprehensive xUnit test suite organized by **module** 
 
 | Module | Focus |
 |--------|-------|
+| `Models.TimeApiResponse` | Deserialization of the real snake_case API payload, `DateTimeOffset` computed property, offset handling, partial payloads |
 | `Services.DateFormatter` | Gregorian + Persian formatting, digit conversion, culture invariance |
 | `Services.SettingsService` | Persistence, cloning, invalid input, corrupt-file recovery, event raising |
-| `Services.TimeService` | API sync success/failure, drift projection, semaphore guard, timezone fallback |
+| `Services.TimeService` | API sync success/failure, Windows → IANA URL translation, drift projection, multi-zone reads, semaphore guard, malformed payload fallback |
 | `Services.BackgroundServices` | Hosted service cadence, option binding, DI registration, exception → system-time fallback |
 | `ViewModels.ViewModelBase` | `SetProperty`, `OnPropertyChanged` semantics |
 | `ViewModels.RelayCommand` | Execute/CanExecute both overloads, null guards |
-| `ViewModels.MainViewModel` | Settings binding, derived properties, timer lifecycle |
+| `ViewModels.MainViewModel` | Settings binding, derived properties, timer lifecycle, `FormattedTime` derived from `CurrentTime` |
 | `ViewModels.SettingsViewModel` | Load/save/reset, hex normalization, event propagation, timezone selection |
 | `Views.Converters` | All four converters — including round-trip and fallback paths |
 | `Views.UserControls.DateTimeDisplay` | Construction smoke test, tree structure, binding propagation, visibility, flow direction |
@@ -197,6 +214,7 @@ The project ships with a comprehensive xUnit test suite organized by **module** 
 | DI / Hosting | `Microsoft.Extensions.Hosting` |
 | HTTP | `HttpClient` + `System.Net.Http.Json` |
 | Resilience | `Polly` (retry with exponential backoff, circuit breaker) |
+| Timezone mapping | [TimeZoneConverter](https://github.com/mattjohnsonpint/TimeZoneConverter) `7.2.0` |
 | Serialization | `System.Text.Json` |
 | Testing | xUnit, Moq, Moq.Contrib.HttpClient, FluentAssertions |
 
@@ -237,6 +255,7 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 - Time data by [timeapi.io](https://timeapi.io/)
 - Icons & styling by [MaterialDesignInXamlToolkit](http://materialdesigninxaml.net/)
 - Persian calendar support via `System.Globalization.PersianCalendar`
+- Windows ↔ IANA timezone mapping by [TimeZoneConverter](https://github.com/mattjohnsonpint/TimeZoneConverter) (MIT)
 
 ---
 
