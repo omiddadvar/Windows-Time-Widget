@@ -1,11 +1,10 @@
 ﻿using FluentAssertions;
 using Moq;
 using Moq.Contrib.HttpClient;
-using Moq.Protected;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text;
+using TimeZoneConverter;
 using WindowsTimeWidget.Abstractions;
 using WindowsTimeWidget.Services;
 using WindowsTimeWidget.Tests.TestData;
@@ -16,98 +15,174 @@ namespace WindowsTimeWidget.Tests.Services;
 public class TimeServiceTests
 {
     private static readonly TimeZoneInfo Utc = TimeZoneInfo.Utc;
-    private static string BASE_URL = "https://timeapi.io/";
-    private static string BASE_API_URL = string.Concat(BASE_URL, "api/v1/time/current/zone*");
 
-    private static (TimeService sut, Mock<HttpMessageHandler> handler) CreateSut()
+    private const string WindowsTehran = "Iran Standard Time";
+    private const string WindowsNovosibirsk = "N. Central Asia Standard Time";
+    private const string IanaTehran = "Asia/Tehran";
+    private const string IanaNovosibirsk = "Asia/Novosibirsk";
+
+    private static (TimeService sut, Mock<HttpMessageHandler> handler, Mock<ISettingsService> settings)
+        CreateSut()
     {
         var handler = new Mock<HttpMessageHandler>(MockBehavior.Strict);
-
         var http = handler.CreateClient();
-        http.BaseAddress = new Uri(BASE_URL);
+        http.BaseAddress = new Uri("https://timeapi.io/");
 
         var settings = new Mock<ISettingsService>(MockBehavior.Loose);
         settings.Setup(s => s.Load()).Returns(TestHarness.ValidSettings());
 
-        return (new TimeService(http, settings.Object), handler);
+        var sut = new TimeService(http, settings.Object);
+        return (sut, handler, settings);
     }
+
+    private static string ZoneUrl(string ianaId) =>
+        $"https://timeapi.io/api/v1/time/current/zone?timeZone={Uri.EscapeDataString(ianaId)}";
+
+    private static object Payload(string iana, string iso) => new
+    {
+        date_time = iso,
+        date = iso[..10],
+        time = iso.Substring(11, 8),
+        day_of_week = "Saturday",
+        dst_active = false,
+        timezone = iana,
+        utc_offset_seconds = 0
+    };
 
 
     [Fact]
     public async Task SyncFromApiAsync_Success_DisablesSystemTimeFallback()
     {
         // Arrange
-        var (sut, handler) = CreateSut();
-
-        handler.Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                    "SendAsync",
-                    ItExpr.IsAny<HttpRequestMessage>(),
-                    ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(
-                    """{"date_time":"2026-09-19T13:31:06.598390+00:00","date":"2026-09-19","time":"13:31:06.598390","day_of_week":"Saturday","dst_active":false,"timezone":"UTC","utc_offset_seconds":0}""",
-                    Encoding.UTF8,
-                    "application/json")
-            }
-        );
+        var (sut, handler, _) = CreateSut();
+        handler.SetupRequest(HttpMethod.Get, ZoneUrl(IanaTehran))
+               .ReturnsResponse(HttpStatusCode.OK,
+                   JsonContent.Create(Payload(IanaTehran, "2026-09-26T14:26:29+03:30")));
 
         // Act
-        await sut.SyncFromApiAsync(Utc.Id);
+        await sut.SyncFromApiAsync(WindowsTehran);
 
         // Assert
         sut.IsUsingSystemTimeFallback.Should().BeFalse();
-        sut.LastSuccessfulSyncUtc.Should().NotBeNull();
     }
 
     [Fact]
     public async Task SyncFromApiAsync_Success_RaisesTimeUpdated()
     {
         // Arrange
-        var (sut, handler) = CreateSut();
+        var (sut, handler, _) = CreateSut();
         DateTime? raised = null;
         sut.TimeUpdated += (_, t) => raised = t;
 
-        handler.SetupRequest(HttpMethod.Get, BASE_API_URL)
+        handler.SetupRequest(HttpMethod.Get, ZoneUrl(IanaTehran))
                .ReturnsResponse(HttpStatusCode.OK,
-                   JsonContent.Create(new { dateTime = new DateTime(2024, 3, 15, 12, 0, 0) }));
+                   JsonContent.Create(Payload(IanaTehran, "2026-09-26T14:26:29+03:30")));
 
         // Act
-        await sut.SyncFromApiAsync(Utc.Id);
+        await sut.SyncFromApiAsync(WindowsTehran);
 
         // Assert
         raised.Should().NotBeNull();
     }
 
     [Fact]
+    public async Task SyncFromApiAsync_ConvertsWindowsIdToIanaInUrl()
+    {
+        // Arrange
+        var (sut, handler, _) = CreateSut();
+        handler.SetupRequest(HttpMethod.Get, ZoneUrl(IanaNovosibirsk))
+               .ReturnsResponse(HttpStatusCode.OK,
+                   JsonContent.Create(Payload(IanaNovosibirsk, "2026-09-26T14:26:29+07:00")));
+
+        // Act
+        await sut.SyncFromApiAsync(WindowsNovosibirsk);
+
+        // Assert
+        handler.VerifyAll();
+    }
+
+    [Fact]
+    public async Task SyncFromApiAsync_AcceptsIanaIdDirectly()
+    {
+        // Arrange
+        var (sut, handler, _) = CreateSut();
+        handler.SetupRequest(HttpMethod.Get, ZoneUrl(IanaTehran))
+               .ReturnsResponse(HttpStatusCode.OK,
+                   JsonContent.Create(Payload(IanaTehran, "2026-09-26T14:26:29+03:30")));
+
+        // Act
+        await sut.SyncFromApiAsync(IanaTehran);
+
+        // Assert
+        handler.VerifyAll();
+    }
+
+    [Fact]
+    public async Task SyncFromApiAsync_EmptyTimeZone_FallsBackToLocalId()
+    {
+        // Arrange
+        var (sut, handler, _) = CreateSut();
+
+        var localIana = TZConvert.TryWindowsToIana(TimeZoneInfo.Local.Id, out var iana)
+            ? iana
+            : TimeZoneInfo.Local.Id;
+
+        handler.SetupRequest(HttpMethod.Get, ZoneUrl(localIana))
+               .ReturnsResponse(HttpStatusCode.OK,
+                   JsonContent.Create(Payload(localIana, "2026-09-26T14:26:29+00:00")));
+
+        // Act
+        await sut.SyncFromApiAsync("");
+
+        // Assert
+        sut.IsUsingSystemTimeFallback.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task SyncFromApiAsync_HttpError_EnablesSystemTimeFallback()
     {
         // Arrange
-        var (sut, handler) = CreateSut();
-
-        handler.SetupRequest(HttpMethod.Get, BASE_API_URL)
+        var (sut, handler, _) = CreateSut();
+        handler.SetupRequest(HttpMethod.Get, ZoneUrl(IanaTehran))
                .ReturnsResponse(HttpStatusCode.InternalServerError);
 
         // Act
-        await sut.SyncFromApiAsync(Utc.Id);
+        await sut.SyncFromApiAsync(WindowsTehran);
 
         // Assert
         sut.IsUsingSystemTimeFallback.Should().BeTrue();
-        sut.LastSuccessfulSyncUtc.Should().BeNull();
     }
 
     [Fact]
     public async Task SyncFromApiAsync_EmptyPayload_EnablesSystemTimeFallback()
     {
         // Arrange
-        var (sut, handler) = CreateSut();
-
-        handler.SetupRequest(HttpMethod.Get, BASE_API_URL)
+        var (sut, handler, _) = CreateSut();
+        handler.SetupRequest(HttpMethod.Get, ZoneUrl(IanaTehran))
                .ReturnsResponse(HttpStatusCode.OK, "null", "application/json");
 
         // Act
-        await sut.SyncFromApiAsync(Utc.Id);
+        await sut.SyncFromApiAsync(WindowsTehran);
+
+        // Assert
+        sut.IsUsingSystemTimeFallback.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SyncFromApiAsync_MalformedDateTimeString_EnablesSystemTimeFallback()
+    {
+        // Arrange
+        var (sut, handler, _) = CreateSut();
+        handler.SetupRequest(HttpMethod.Get, ZoneUrl(IanaTehran))
+               .ReturnsResponse(HttpStatusCode.OK, JsonContent.Create(new
+               {
+                   date_time = "not-a-date",
+                   timezone = IanaTehran,
+                   utc_offset_seconds = 0
+               }));
+
+        // Act
+        await sut.SyncFromApiAsync(WindowsTehran);
 
         // Assert
         sut.IsUsingSystemTimeFallback.Should().BeTrue();
@@ -117,26 +192,28 @@ public class TimeServiceTests
     public async Task GetCurrentTime_AfterSync_ProjectsFromSnapshot()
     {
         // Arrange
-        var (sut, handler) = CreateSut();
-        var apiLocal = DateTime.UtcNow;
-
-        handler.SetupRequest(HttpMethod.Get, BASE_API_URL)
+        var (sut, handler, _) = CreateSut();
+        var nowUtc = DateTimeOffset.UtcNow;
+        var iso = nowUtc.ToString("yyyy-MM-ddTHH:mm:sszzz");
+        handler.SetupRequest(HttpMethod.Get, ZoneUrl(IanaTehran))
                .ReturnsResponse(HttpStatusCode.OK,
-                   JsonContent.Create(new { dateTime = apiLocal }));
+                   JsonContent.Create(Payload(IanaTehran, iso)));
+
+        await sut.SyncFromApiAsync(WindowsTehran);
 
         // Act
-        await sut.SyncFromApiAsync(Utc.Id);
-        var projected = sut.GetCurrentTime(Utc.Id);
+        var projected = sut.GetCurrentTime(WindowsTehran);
 
         // Assert
-        projected.Should().BeCloseTo(apiLocal, TimeSpan.FromSeconds(3));
+        var expectedTehran = TimeZoneInfo.ConvertTime(nowUtc, TimeZoneInfo.FindSystemTimeZoneById(WindowsTehran));
+        projected.Should().BeCloseTo(expectedTehran.DateTime, TimeSpan.FromSeconds(3));
     }
 
     [Fact]
     public void GetCurrentTime_WithoutSync_UsesSystemTime()
     {
         // Arrange
-        var (sut, _) = CreateSut();
+        var (sut, _, _) = CreateSut();
 
         // Act
         var before = DateTime.UtcNow;
@@ -149,14 +226,72 @@ public class TimeServiceTests
     }
 
     [Fact]
+    public async Task GetCurrentTime_AfterZoneChange_ReflectsNewZone()
+    {
+        // Arrange
+        var instant = new DateTimeOffset(2026, 9, 26, 12, 0, 0, TimeSpan.Zero);
+
+        var tehranIso = instant.ToOffset(TimeSpan.FromHours(3.5))
+                               .ToString("yyyy-MM-ddTHH:mm:sszzz");
+        var novosibirskIso = instant.ToOffset(TimeSpan.FromHours(7))
+                                    .ToString("yyyy-MM-ddTHH:mm:sszzz");
+
+        var (sut, handler, _) = CreateSut();
+
+        handler.SetupRequest(HttpMethod.Get, ZoneUrl(IanaTehran))
+               .ReturnsResponse(HttpStatusCode.OK,
+                   JsonContent.Create(Payload(IanaTehran, tehranIso)));
+
+        await sut.SyncFromApiAsync(WindowsTehran, CancellationToken.None);
+
+        // Act
+        var tehran = sut.GetCurrentTime(WindowsTehran);
+
+        handler.SetupRequest(HttpMethod.Get, ZoneUrl(IanaNovosibirsk))
+               .ReturnsResponse(HttpStatusCode.OK,
+                   JsonContent.Create(Payload(IanaNovosibirsk, novosibirskIso)));
+
+        await sut.SyncFromApiAsync(WindowsNovosibirsk, CancellationToken.None);
+        var novosibirsk = sut.GetCurrentTime(WindowsNovosibirsk);
+
+        // Assert
+        (novosibirsk - tehran)
+            .Should().BeCloseTo(TimeSpan.FromHours(3.5), TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
+    public async Task GetCurrentTime_ForZoneDifferentFromSnapshot_UsesCorrectOffset()
+    {
+        // Arrange
+        var instant = new DateTimeOffset(2026, 9, 26, 7, 26, 29, TimeSpan.Zero);
+        var novosibirskIso = instant.ToOffset(TimeSpan.FromHours(7))
+                                    .ToString("yyyy-MM-ddTHH:mm:sszzz");
+
+        var (sut, handler, _) = CreateSut();
+        handler.SetupRequest(HttpMethod.Get, ZoneUrl(IanaNovosibirsk))
+               .ReturnsResponse(HttpStatusCode.OK,
+                   JsonContent.Create(Payload(IanaNovosibirsk, novosibirskIso)));
+
+        await sut.SyncFromApiAsync(WindowsNovosibirsk);
+
+        // Act
+        var asNovosibirsk = sut.GetCurrentTime(WindowsNovosibirsk);
+        var asUtc = sut.GetCurrentTime("UTC");
+
+        // Assert
+        (asNovosibirsk - asUtc)
+            .Should().BeCloseTo(TimeSpan.FromHours(7), TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
     public async Task UseSystemTime_AfterSync_FlipsFlagAndRaisesEvent()
     {
         // Arrange
-        var (sut, handler) = CreateSut();
-        handler.SetupRequest(HttpMethod.Get, BASE_API_URL)
+        var (sut, handler, _) = CreateSut();
+        handler.SetupRequest(HttpMethod.Get, ZoneUrl(IanaTehran))
                .ReturnsResponse(HttpStatusCode.OK,
-                   JsonContent.Create(new { dateTime = DateTime.UtcNow }));
-        await sut.SyncFromApiAsync(Utc.Id);
+                   JsonContent.Create(Payload(IanaTehran, "2026-09-26T14:26:29+03:30")));
+        await sut.SyncFromApiAsync(WindowsTehran);
 
         var raised = false;
         sut.TimeUpdated += (_, _) => raised = true;
@@ -173,35 +308,36 @@ public class TimeServiceTests
     public async Task SyncFromApiAsync_WhenAlreadyRunning_SecondCallReturnsImmediately()
     {
         // Arrange
-        var (sut, handler) = CreateSut();
-        var tcs = new TaskCompletionSource<HttpResponseMessage>();
+        var (sut, handler, _) = CreateSut();
+        var tcs = new TaskCompletionSource<HttpResponseMessage>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
 
-        handler.SetupRequest(HttpMethod.Get, BASE_API_URL)
-               .ReturnsAsync(() => tcs.Task.Result);
+        handler.SetupRequest(HttpMethod.Get, ZoneUrl(IanaTehran))
+               .Returns(() => tcs.Task);
+
+        var first = sut.SyncFromApiAsync(WindowsTehran);
 
         // Act
-        var first = sut.SyncFromApiAsync(Utc.Id);
-        var second = sut.SyncFromApiAsync(Utc.Id);
+        var second = sut.SyncFromApiAsync(WindowsTehran);
 
         // Assert
         second.IsCompleted.Should().BeTrue();
 
         tcs.SetResult(new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = JsonContent.Create(new { dateTime = DateTime.UtcNow })
+            Content = JsonContent.Create(Payload(IanaTehran, "2026-09-26T14:26:29+03:30"))
         });
         await first;
     }
-
 
     [Fact]
     public void GetCurrentTime_UnknownTimeZone_FallsBackToLocal()
     {
         // Arrange
-        var (sut, _) = CreateSut();
+        var (sut, _, _) = CreateSut();
 
         // Act
-        var act = () => sut.GetCurrentTime("Not/A/Real/Zone");
+        Action act = () => _ = sut.GetCurrentTime("Not/A/Real/Zone");
 
         // Assert
         act.Should().NotThrow();

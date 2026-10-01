@@ -12,14 +12,14 @@ namespace WindowsTimeWidget.Tests.ViewModels;
 public class MainViewModelTests
 {
     private static (MainViewModel sut, SettingsService settings, Mock<ITimeService> time)
-        CreateSut(WidgetSettings? seed = null)
+        CreateSut(WidgetSettings? seed = null, DateTime? fixedTime = null)
     {
         var settings = new SettingsService();
         settings.Save(seed ?? TestHarness.ValidSettings());
 
         var time = new Mock<ITimeService>(MockBehavior.Loose);
         time.Setup(t => t.GetCurrentTime(It.IsAny<string>()))
-            .Returns(new DateTime(2024, 3, 15, 10, 30, 0));
+            .Returns(fixedTime ?? new DateTime(2024, 3, 15, 10, 30, 0));
         time.SetupGet(t => t.IsUsingSystemTimeFallback).Returns(false);
         time.Setup(t => t.SyncFromApiAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -42,7 +42,7 @@ public class MainViewModelTests
     }
 
     [Fact]
-    public void Start_StartsUiTimerAndKicksOffSync()
+    public void Start_KicksOffSyncFromApi()
     {
         // Arrange
         var (sut, _, time) = StaRunner.Run(() => CreateSut());
@@ -53,6 +53,20 @@ public class MainViewModelTests
         // Assert
         time.Verify(t => t.SyncFromApiAsync(
             It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public void Start_UpdatesCurrentTime_FromService()
+    {
+        // Arrange
+        var injected = new DateTime(2026, 9, 26, 14, 26, 0);
+        var (sut, _, _) = StaRunner.Run(() => CreateSut(fixedTime: injected));
+
+        // Act
+        StaRunner.Run(() => sut.Start());
+
+        // Assert
+        sut.CurrentTime.Should().Be(injected);
     }
 
     [Fact]
@@ -67,6 +81,94 @@ public class MainViewModelTests
 
         // Assert
         act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void FormattedTime_DerivesFromCurrentTime_NotWallClock()
+    {
+        // Arrange
+        var seed = TestHarness.ValidSettings();
+        seed.Use24HourFormat = true;
+        seed.ShowSeconds = false;
+
+        var injected = new DateTime(2026, 9, 26, 14, 26, 0);
+        var (sut, _, _) = StaRunner.Run(() => CreateSut(seed, injected));
+
+        // Act
+        StaRunner.Run(() => sut.Start());
+
+        // Assert
+        sut.FormattedTime.Should().Be("14:26");
+    }
+
+    [Fact]
+    public void FormattedTime_Uses24HourFormat_WhenConfigured()
+    {
+        // Arrange
+        var seed = TestHarness.ValidSettings();
+        seed.Use24HourFormat = false;
+        seed.ShowSeconds = false;
+
+        var injected = new DateTime(2026, 9, 26, 14, 26, 0);
+        var (sut, _, _) = StaRunner.Run(() => CreateSut(seed, injected));
+
+        // Act
+        StaRunner.Run(() => sut.Start());
+
+        // Assert
+        sut.FormattedTime.Should().Be("02:26 PM");
+    }
+
+    [Fact]
+    public void FormattedTime_IncludesSeconds_WhenConfigured()
+    {
+        // Arrange
+        var seed = TestHarness.ValidSettings();
+        seed.Use24HourFormat = true;
+        seed.ShowSeconds = true;
+
+        var injected = new DateTime(2026, 9, 26, 14, 26, 42);
+        var (sut, _, _) = StaRunner.Run(() => CreateSut(seed, injected));
+
+        // Act
+        StaRunner.Run(() => sut.Start());
+
+        // Assert
+        sut.FormattedTime.Should().Be("14:26:42");
+    }
+
+    [Fact]
+    public void FormattedDate_IsGregorian_WhenLanguageEnglish()
+    {
+        // Arrange
+        var seed = TestHarness.ValidSettings();
+        seed.Language = WidgetLanguage.English;
+
+        var injected = new DateTime(2024, 3, 15, 10, 0, 0);
+        var (sut, _, _) = StaRunner.Run(() => CreateSut(seed, injected));
+
+        // Act
+        StaRunner.Run(() => sut.Start());
+
+        // Assert
+        sut.FormattedDate.Should().Be("Friday, March 15, 2024");
+    }
+
+    [Fact]
+    public void FormattedDate_IsPersian_WhenLanguagePersian()
+    {
+        // Arrange
+        var seed = TestHarness.ValidSettings();
+        seed.Language = WidgetLanguage.Persian;
+
+        var injected = new DateTime(2024, 3, 15, 10, 0, 0);
+        var (sut, _, _) = StaRunner.Run(() => CreateSut(seed, injected));
+
+        // Act
+        StaRunner.Run(() => sut.Start());
+
+        // Assert
+        sut.FormattedDate.Should().Contain("اسفند");
     }
 
     [Fact]
@@ -105,7 +207,8 @@ public class MainViewModelTests
                       .And.Contain(nameof(MainViewModel.TimeFontSize))
                       .And.Contain(nameof(MainViewModel.DateFontSize))
                       .And.Contain(nameof(MainViewModel.BackgroundBrush))
-                      .And.Contain(nameof(MainViewModel.IsPersianPrimary));
+                      .And.Contain(nameof(MainViewModel.IsPersianPrimary))
+                      .And.Contain(nameof(MainViewModel.TimeZoneLabel));
     }
 
     [Fact]
@@ -138,6 +241,42 @@ public class MainViewModelTests
 
         // Assert
         brush.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void TimeUpdated_EventFromService_UpdatesIsUsingSystemTime()
+    {
+        // Arrange
+        var (sut, _, time) = StaRunner.Run(() => CreateSut());
+        time.SetupGet(t => t.IsUsingSystemTimeFallback).Returns(true);
+
+        // Act
+        StaRunner.Run(() => time.Raise(
+            t => t.TimeUpdated += null,
+            [
+                sut,
+                new DateTime(2024, 3, 15, 11, 0, 0)
+            ]));
+
+        // Assert
+        sut.IsUsingSystemTime.Should().BeTrue();
+    }
+
+    [Fact]
+    public void TimeUpdated_EventFromService_UpdatesCurrentTime()
+    {
+        // Arrange
+        var (sut, _, time) = StaRunner.Run(() => CreateSut());
+        var raised = new DateTime(2026, 9, 26, 14, 26, 0);
+
+        // Act
+        StaRunner.Run(() => time.Raise(
+            t => t.TimeUpdated += null,
+            [sut, raised]
+        ));
+
+        // Assert
+        sut.CurrentTime.Should().Be(raised);
     }
 
     [Fact]
@@ -183,15 +322,15 @@ public class MainViewModelTests
     }
 
     [Fact]
-    public void Dispose_UnsubscribesFromTimeUpdated()
+    public void Dispose_DoesNotThrow()
     {
         // Arrange
-        var (sut, _, time) = StaRunner.Run(() => CreateSut());
+        var (sut, _, _) = StaRunner.Run(() => CreateSut());
 
         // Act
-        StaRunner.Run(() => sut.Dispose());
+        Action act = () => StaRunner.Run(() => sut.Dispose());
 
         // Assert
-        sut.Should().NotBeNull();
+        act.Should().NotThrow();
     }
 }

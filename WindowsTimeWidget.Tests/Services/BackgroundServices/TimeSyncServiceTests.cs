@@ -104,11 +104,17 @@ public class TimeSyncServiceTests
     public async Task TriggerSync_CausesImmediateSync_BeforeIntervalElapses()
     {
         // Arrange
-        var time = new Mock<ITimeService>(MockBehavior.Loose);
-        var syncStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var syncCount = 0;
+        var secondSyncStarted = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
 
+        var time = new Mock<ITimeService>(MockBehavior.Loose);
         time.Setup(t => t.SyncFromApiAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Callback(() => syncStarted.TrySetResult())
+            .Callback(() =>
+            {
+                if (Interlocked.Increment(ref syncCount) == 2)
+                    secondSyncStarted.TrySetResult();
+            })
             .Returns(Task.CompletedTask);
 
         var sut = CreateSut(time: time, options: new TimeSyncOptions
@@ -117,20 +123,28 @@ public class TimeSyncServiceTests
             SyncInterval = TimeSpan.FromSeconds(30)
         });
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
         // Act
         await sut.StartAsync(cts.Token);
-        await Task.Delay(100, cts.Token);
+
+        await TestHarness.WaitUntilAsync(() =>
+                Volatile.Read(ref syncCount) >= 1,
+            TimeSpan.FromSeconds(2));
+
         sut.TriggerSync();
 
         // Assert
-        var completed = await Task.WhenAny(syncStarted.Task, Task.Delay(1000, cts.Token));
-        completed.Should().Be(syncStarted.Task);
+        var completed = await Task.WhenAny(
+            secondSyncStarted.Task,
+            Task.Delay(TimeSpan.FromSeconds(2), cts.Token));
+
+        completed.Should().Be(secondSyncStarted.Task,
+            "TriggerSync must interrupt the 30s interval and start a new sync immediately");
 
         await sut.StopAsync(CancellationToken.None);
-        time.Verify(t => t.SyncFromApiAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.AtLeast(2));
+
+        syncCount.Should().BeGreaterThanOrEqualTo(2);
     }
 
     [Fact]

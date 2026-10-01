@@ -23,4 +23,15 @@ internal static class TestHarness
         "Mohaasaan", "DateTimeWidget");
 
     public static string RealSettingsFile => Path.Combine(RealSettingsFolder, "settings.json");
+
+    public static async Task WaitUntilAsync(Func<bool> condition, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (!condition())
+        {
+            if (DateTime.UtcNow > deadline)
+                throw new TimeoutException("Condition not satisfied within timeout.");
+            await Task.Delay(20);
+        }
+    }
 }
