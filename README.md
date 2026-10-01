@@ -111,7 +111,6 @@ Or filter by module:
 dotnet test --filter "Module~Services"
 dotnet test --filter "Module~ViewModels"
 dotnet test --filter "Module~Views.Converters"
-dotnet test --filter "Module~Views.UserControls"
 ```
 
 ---
