@@ -31,7 +31,7 @@
 ---
 
 ## 📸 Preview
-![DateTime Widget preview](docs/images/preview-gif.jpg)
+![DateTime Widget preview](docs/images/preview-gif.gif)
 ![DateTime Widget preview](docs/images/preview-1.jpg)
 ![DateTime Widget preview](docs/images/preview-2.jpg)
 
