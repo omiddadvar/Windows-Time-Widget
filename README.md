@@ -94,8 +94,8 @@ WindowsTimeWidget/
 ### Build & Run
 
 ```bash
-git clone https://github.com/omiddadvar/DateTimeWidget.git
-cd DateTimeWidget
+git clone https://github.com/omiddadvar/Windows-Time-Widget
+cd Windows-Time-Widget
 dotnet restore
 dotnet run --project WindowsTimeWidget
 ```
