@@ -18,9 +18,7 @@ jobs:
 
     env:
       Solution_Name: TimeWidget.slnx
-      Test_Project_Path: WindowsTimeWidget.Tests\WindowsTimeWidget.Tests.csproj
       Configuration: ${{ matrix.configuration }}
-      Wap_Project_Path: WindowsTimeWidget.Package\WindowsTimeWidget.Package.wapproj
 
     steps:
     - name: Checkout
@@ -32,11 +30,6 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 10.0.x
-        
-    - name: Setup MSBuild.exe
-      uses: microsoft/setup-msbuild@v3
-      with:
-        msbuild-architecture: x64
 
     - name: Restore
       run: dotnet restore $env:Solution_Name
@@ -45,9 +38,18 @@ jobs:
       run: dotnet build $env:Solution_Name --no-restore --configuration $env:Configuration
 
     - name: Test
-      run: dotnet test $env:Test_Project_Path --no-build --configuration $env:Configuration --verbosity normal
+      run: dotnet test $env:Solution_Name --no-build --configuration $env:Configuration --verbosity normal
 
-    - name: Build WAP project
+    - name: Publish
+      if: matrix.configuration == 'Release'
       run: >
-        msbuild $env:Wap_Project_Path
-        /p:Configuration=$env:Configuration
+        dotnet publish WindowsTimeWidget\WindowsTimeWidget.csproj
+        --configuration Release
+        --output .\publish
+
+    - name: Upload artifact
+      if: matrix.configuration == 'Release'
+      uses: actions/upload-artifact@v4
+      with:
+        name: WindowsTimeWidget-Release
+        path: .\publish
