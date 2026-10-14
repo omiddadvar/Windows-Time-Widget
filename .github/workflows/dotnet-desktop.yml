@@ -42,7 +42,7 @@ jobs:
         msbuild-architecture: x64
 
     - name: Restore the application
-      run: msbuild $env:Solution_Name /t:Restore /p:Configuration=$env:Configuration
+      run: msbuild $env:Solution_Name /t:Restore /p:Configuration=$env:Configuration /p:RuntimeIdentifiers="win-x86;win-x64"
       env:
         Configuration: ${{ matrix.configuration }}
 
